@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#define CTRL_KEY(k) ((k) & 0x1f)
+
 struct terminalInfo {
     struct termios originalParams;
     struct termios currParams;
@@ -24,7 +26,6 @@ void leaveRawMode()
 
 void enterRawMode()
 {
-
     tcgetattr(STDIN_FILENO, &termInfo.originalParams);
     termInfo.currParams = termInfo.originalParams;
 
@@ -49,7 +50,7 @@ int main(void)
     {
         read(STDIN_FILENO, &c, 1);
 
-        if (c == 'q')
+        if (c == CTRL_KEY('q'))
         {
             exit(0);
         } else
