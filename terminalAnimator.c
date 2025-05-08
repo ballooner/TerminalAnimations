@@ -1,10 +1,15 @@
+//Includes
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
 
+
+//Defines
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+
+//Data
 struct terminalInfo {
     struct termios originalParams;
     struct termios currParams;
@@ -14,6 +19,8 @@ struct terminalInfo {
 
 struct terminalInfo termInfo;
 
+
+//Terminal Functions
 void kill(const char *s)
 {
     perror(s);
@@ -40,6 +47,12 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
+
+//Input
+
+
+
+//Init
 int main(void)
 {
     enterRawMode();
