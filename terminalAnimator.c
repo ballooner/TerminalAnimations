@@ -50,15 +50,6 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
-void clearScreen()
-{
-    //Clear the screen
-    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
-
-    //Set the cursor to home
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
-}
-
 int getTerminalSize(int *row, int *col)
 {
     //Move cursor to bottom left and request cursor position
@@ -84,6 +75,17 @@ int getTerminalSize(int *row, int *col)
     return 0;
 }
 
+//Render functions
+void clearScreen()
+{
+    //Clear the screen
+    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
+
+    //Set the cursor to home
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
+}
+
+
 //Input
 void processInput()
 {
@@ -108,7 +110,6 @@ void processInput()
 int main(void)
 {
     enterRawMode();
-
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         kill("getTerminalSize");
 
