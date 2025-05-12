@@ -12,11 +12,17 @@
 
 
 //Data
+enum ScreenStates {
+    MAIN = 1,
+    ANIMATION = 2
+};
+
 struct terminalInfo {
     struct termios originalParams;
     struct termios currParams;
     int rowSize;
     int colSize;
+    enum ScreenStates screenState;
 };
 
 struct terminalInfo termInfo;
@@ -149,6 +155,7 @@ void processInput()
 //Init
 int main(void)
 {
+    termInfo.screenState = ANIMATION;
     enterRawMode();
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         kill("getTerminalSize");
