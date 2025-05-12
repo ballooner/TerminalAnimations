@@ -86,6 +86,7 @@ void clearScreen()
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
 }
 
+//Render the animation overlay to show keybinds
 void renderOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
