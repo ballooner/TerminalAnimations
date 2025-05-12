@@ -93,7 +93,7 @@ void clearScreen()
 }
 
 //Render the animation overlay to show keybinds
-void renderOverlay()
+void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
 
@@ -132,6 +132,7 @@ void processInput()
 
     while (1)
     {
+        clearScreen();
         read(STDIN_FILENO, &c, 1);
 
         switch (c)
@@ -155,14 +156,13 @@ void processInput()
 //Init
 int main(void)
 {
-    termInfo.screenState = ANIMATION;
+    termInfo.screenState = MAIN;
     enterRawMode();
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         kill("getTerminalSize");
 
-    clearScreen();
-    renderOverlay();
     processInput();
+    clearScreen();
 
     return 0;
 }
