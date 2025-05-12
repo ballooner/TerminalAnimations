@@ -50,6 +50,11 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
+void clearScreen()
+{
+    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
+}
+
 int getTerminalSize(int *row, int *col)
 {
     if (write(STDIN_FILENO, "\x1b[999B\x1b[999C\x1b[6n", 16) == -1) return -1;
@@ -79,6 +84,7 @@ int getTerminalSize(int *row, int *col)
 int main(void)
 {
     enterRawMode();
+    clearScreen();
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         kill("getTerminalSize");
     printf("row: %d, col: %d\r\n", termInfo.rowSize, termInfo.colSize);
