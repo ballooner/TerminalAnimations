@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 
 
 //Defines
@@ -85,6 +86,37 @@ void clearScreen()
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
 }
 
+void renderOverlay()
+{
+    int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
+
+    //Set cursor to home position just in case
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("renderOverlay set home");
+
+    char buffer[32];
+
+    //Move down 3/4 of the screen
+    sprintf(buffer, "\x1b[%dB", topOverlayRow);
+    if (write(STDIN_FILENO, buffer, strlen(buffer)) == -1)
+        kill("renderOverlay move cursor");
+
+    //Set bg of future text to white
+    if (write(STDIN_FILENO, "\x1b[107m", 6) == -1)
+        kill("renderOverlay set bg to white");
+
+    //Set 3/4 line to white
+    for (int i = 0; i < termInfo.colSize; i++)
+    {
+        printf(" ");
+    }
+
+    printf("\r\n");
+    if (write(STDIN_FILENO, "\x1b[49m", 5) == -1)
+        kill("renderOverlay set bg color to default");
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) 
+        kill("renderOverlay set cursor to home");
+}
+
 
 //Input
 void processInput()
@@ -101,6 +133,13 @@ void processInput()
                 exit(0);
                 break;
             default:
+                if (iscntrl(c))
+                {
+                    printf("%d\r\n", c);
+                } else
+                {
+                    printf("%c: %d\r\n", c, c);
+                }
                 break;
         }
     }
@@ -114,6 +153,7 @@ int main(void)
         kill("getTerminalSize");
 
     clearScreen();
+    renderOverlay();
     processInput();
 
     return 0;
