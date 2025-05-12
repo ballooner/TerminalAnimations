@@ -52,19 +52,23 @@ void enterRawMode()
 
 void clearScreen()
 {
+    //Clear the screen
     if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
 
+    //Set the cursor to home
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
 }
 
 int getTerminalSize(int *row, int *col)
 {
+    //Move cursor to bottom left and request cursor position
     if (write(STDIN_FILENO, "\x1b[999B\x1b[999C\x1b[6n", 16) == -1) return -1;
 
     printf("\r\n");
     char buffer[32];
     unsigned int index = 0;
 
+    //Read cursor position report
     while (read(STDIN_FILENO, &buffer[index], 1) == 1)
     {
         if (index > sizeof(buffer) - 1) break;
@@ -73,10 +77,9 @@ int getTerminalSize(int *row, int *col)
 
     buffer[index] = '\0';
 
+    //Process the report
     if (buffer[0] != '\x1b' && buffer[1] != '[') return -1;
     sscanf(&buffer[2], "%d;%d", row, col);
-
-
 
     return 0;
 }
@@ -92,7 +95,7 @@ void processInput()
 
         switch (c)
         {
-            case CTRL_KEY('q'):
+            case CTRL_KEY('q'): //Quit when ctrl+q pressed
                 exit(0);
                 break;
             default:
