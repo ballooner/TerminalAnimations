@@ -53,6 +53,8 @@ void enterRawMode()
 void clearScreen()
 {
     if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
+
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
 }
 
 int getTerminalSize(int *row, int *col)
@@ -74,35 +76,41 @@ int getTerminalSize(int *row, int *col)
     if (buffer[0] != '\x1b' && buffer[1] != '[') return -1;
     sscanf(&buffer[2], "%d;%d", row, col);
 
+
+
     return 0;
 }
 
 //Input
-
-
-//Init
-int main(void)
+void processInput()
 {
-    enterRawMode();
-    clearScreen();
-    if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
-        kill("getTerminalSize");
-    printf("row: %d, col: %d\r\n", termInfo.rowSize, termInfo.colSize);
-
     char c;
 
     while (1)
     {
         read(STDIN_FILENO, &c, 1);
 
-        if (c == CTRL_KEY('q'))
+        switch (c)
         {
-            exit(0);
-        } else
-        {
-            printf("%c: %d\r\n", c, c);
+            case CTRL_KEY('q'):
+                exit(0);
+                break;
+            default:
+                break;
         }
     }
+}
+
+//Init
+int main(void)
+{
+    enterRawMode();
+
+    if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
+        kill("getTerminalSize");
+
+    clearScreen();
+    processInput();
 
     return 0;
 }
