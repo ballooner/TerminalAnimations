@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
+#include <signal.h>
 
 
 //Defines
@@ -26,10 +27,11 @@ struct terminalInfo {
 };
 
 struct terminalInfo termInfo;
+struct sigaction windowSizeAction;
 
 
 //Terminal Functions
-void kill(const char *s)
+void die(const char *s)
 {
     perror(s);
     exit(-1);
@@ -82,34 +84,40 @@ int getTerminalSize(int *row, int *col)
     return 0;
 }
 
+void windowResizeHandler(int signum)
+{
+    getTerminalSize(&termInfo.rowSize, &termInfo.colSize);
+}
+
+
 //Render functions
 void clearScreen()
 {
     //Clear the screen
-    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) kill("clearScreen");
+    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) die("clearScreen");
 
     //Set the cursor to home
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("clearScreen set cursor");
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("clearScreen set cursor");
 }
 
-//Render the animation overlay to show keybinds
+    //Render the animation overlay to show keybinds
 void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
 
     //Set cursor to home position just in case
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) kill("renderOverlay set home");
+    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("renderOverlay set home");
 
     char buffer[32];
 
     //Move down 3/4 of the screen
     sprintf(buffer, "\x1b[%dB", topOverlayRow);
     if (write(STDIN_FILENO, buffer, strlen(buffer)) == -1)
-        kill("renderOverlay move cursor");
+        die("renderOverlay move cursor");
 
     //Set bg of future text to white
     if (write(STDIN_FILENO, "\x1b[107m", 6) == -1)
-        kill("renderOverlay set bg to white");
+        die("renderOverlay set bg to white");
 
     //Set 3/4 line to white
     for (int i = 0; i < termInfo.colSize; i++)
@@ -119,9 +127,9 @@ void renderAnimationOverlay()
 
     printf("\r\n");
     if (write(STDIN_FILENO, "\x1b[49m", 5) == -1)
-        kill("renderOverlay set bg color to default");
+        die("renderOverlay set bg color to default");
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) 
-        kill("renderOverlay set cursor to home");
+        die("renderOverlay set cursor to home");
 }
 
 
@@ -138,6 +146,7 @@ void processInput()
         switch (c)
         {
             case CTRL_KEY('q'): //Quit when ctrl+q pressed
+                clearScreen();
                 exit(0);
                 break;
             default:
@@ -158,11 +167,19 @@ int main(void)
 {
     termInfo.screenState = MAIN;
     enterRawMode();
+    
+    //Set up a custom signal handler to update terminal size variables when
+    //window size is changed
+    sigemptyset(&windowSizeAction.sa_mask);
+    windowSizeAction.sa_flags = 0;
+    windowSizeAction.sa_handler = windowResizeHandler;
+
+    sigaction(SIGWINCH, &windowSizeAction, NULL);
+
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
-        kill("getTerminalSize");
+        die("getTerminalSize");
 
     processInput();
-    clearScreen();
 
     return 0;
 }
