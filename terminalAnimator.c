@@ -15,7 +15,7 @@
 //Data
 enum ScreenStates {
     MAIN = 1,
-    ANIMATION = 2
+    ANIMATE = 2
 };
 
 struct terminalInfo {
@@ -23,6 +23,8 @@ struct terminalInfo {
     struct termios currParams;
     int rowSize;
     int colSize;
+    int cursX;
+    int cursY;
     enum ScreenStates screenState;
 };
 
@@ -59,12 +61,10 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
-int getTerminalSize(int *row, int *col)
+void getCursorPosition(int *cursorX, int *cursorY)
 {
-    //Move cursor to bottom left and request cursor position
-    if (write(STDIN_FILENO, "\x1b[999B\x1b[999C\x1b[6n", 16) == -1) return -1;
+    if (write(STDIN_FILENO, "\x1b[6n", 4) == -1) die("getCursorPosition report");
 
-    printf("\r\n");
     char buffer[32];
     unsigned int index = 0;
 
@@ -78,8 +78,16 @@ int getTerminalSize(int *row, int *col)
     buffer[index] = '\0';
 
     //Process the report
-    if (buffer[0] != '\x1b' && buffer[1] != '[') return -1;
-    sscanf(&buffer[2], "%d;%d", row, col);
+    if (buffer[0] != '\x1b' && buffer[1] != '[') die("getCursorPosition process");
+    sscanf(&buffer[2], "%d;%d", cursorX, cursorY);
+}
+
+int getTerminalSize(int *row, int *col)
+{
+    //Move cursor to bottom left and request cursor position
+    if (write(STDIN_FILENO, "\x1b[999B\x1b[999C", 12) == -1) return -1;
+
+    getCursorPosition(row, col);
 
     return 0;
 }
@@ -98,6 +106,13 @@ void clearScreen()
 
     //Set the cursor to home
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("clearScreen set cursor");
+}
+
+    //Render the main menu
+void renderMainMenu()
+{
+    printf("1. Animate\r\n");
+    printf("2. Quit\r\n");
 }
 
     //Render the animation overlay to show keybinds
@@ -134,31 +149,54 @@ void renderAnimationOverlay()
 
 
 //Input
-void processInput()
+void processMainInput()
 {
     char c;
+    read(STDIN_FILENO, &c, 1);
+    switch (c)
+    {
+        case CTRL_KEY('q'): case '2':
+            clearScreen();
+            exit(0);
+            break;
+        case '1':
+            termInfo.screenState = ANIMATE;
+            break;
+    }
+}
 
+void processAnimateInput()
+{
+    char c;
+    read(STDIN_FILENO, &c, 1);
+    switch (c)
+    {
+        case CTRL_KEY('q'):
+            clearScreen();
+            exit(0);
+            break;
+    }
+}
+
+void processScreen()
+{
     while (1)
     {
         clearScreen();
-        read(STDIN_FILENO, &c, 1);
 
-        switch (c)
+        //Decide what menu to render
+        switch (termInfo.screenState)
         {
-            case CTRL_KEY('q'): //Quit when ctrl+q pressed
-                clearScreen();
-                exit(0);
+            case MAIN:
+                renderMainMenu();
+                processMainInput();
                 break;
-            default:
-                if (iscntrl(c))
-                {
-                    printf("%d\r\n", c);
-                } else
-                {
-                    printf("%c: %d\r\n", c, c);
-                }
+            case ANIMATE:
+                renderAnimationOverlay();
+                processAnimateInput();
                 break;
         }
+
     }
 }
 
@@ -179,7 +217,7 @@ int main(void)
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         die("getTerminalSize");
 
-    processInput();
+    processScreen();
 
     return 0;
 }
