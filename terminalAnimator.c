@@ -23,8 +23,8 @@ struct terminalInfo {
     struct termios currParams;
     int rowSize;
     int colSize;
-    int cursX;
-    int cursY;
+    int cursorX;
+    int cursorY;
     enum ScreenStates screenState;
 };
 
@@ -61,8 +61,9 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
-void getCursorPosition(int *cursorX, int *cursorY)
+void getCursorPosition()
 {
+    //Request position report
     if (write(STDIN_FILENO, "\x1b[6n", 4) == -1) die("getCursorPosition report");
 
     char buffer[32];
@@ -79,15 +80,18 @@ void getCursorPosition(int *cursorX, int *cursorY)
 
     //Process the report
     if (buffer[0] != '\x1b' && buffer[1] != '[') die("getCursorPosition process");
-    sscanf(&buffer[2], "%d;%d", cursorX, cursorY);
+    sscanf(&buffer[2], "%d;%d", &termInfo.cursorY, &termInfo.cursorX);
 }
 
 int getTerminalSize(int *row, int *col)
 {
-    //Move cursor to bottom left and request cursor position
+    //Move cursor to bottom right and request cursor position
     if (write(STDIN_FILENO, "\x1b[999B\x1b[999C", 12) == -1) return -1;
 
-    getCursorPosition(row, col);
+    getCursorPosition();
+
+    *col = termInfo.cursorX;
+    *row = termInfo.cursorY;
 
     return 0;
 }
@@ -120,7 +124,7 @@ void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
 
-    //Set cursor to home position just in case
+    //Set cursor to home position
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("renderOverlay set home");
 
     char buffer[32];
@@ -183,6 +187,7 @@ void processScreen()
     while (1)
     {
         clearScreen();
+        getCursorPosition();
 
         //Decide what menu to render
         switch (termInfo.screenState)
