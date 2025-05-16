@@ -25,7 +25,8 @@ struct terminalInfo {
     int colSize;
     int cursorX;
     int cursorY;
-    int cursorYLimit;
+    int cursorYMax;
+    int cursorYMin;
     enum ScreenStates screenState;
 };
 
@@ -112,8 +113,8 @@ int getTerminalSize(int *row, int *col)
 
 void windowResizeHandler()
 {
-    termInfo.cursorX = 1;
-    termInfo.cursorY = 1;
+    termInfo.cursorX = 0;
+    termInfo.cursorY = termInfo.cursorYMin;
     getTerminalSize(&termInfo.rowSize, &termInfo.colSize);
 }
 
@@ -129,7 +130,8 @@ void renderMainMenu()
 void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
-    termInfo.cursorYLimit = topOverlayRow;
+    termInfo.cursorYMax = topOverlayRow + 1;
+    termInfo.cursorYMin = 1;
 
     //Set cursor to home position
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("renderOverlay set home");
@@ -173,6 +175,8 @@ void processMainInput()
             break;
         case '1':
             termInfo.screenState = ANIMATE;
+            termInfo.cursorY = 1;
+            setCursorPosition(termInfo.cursorY, termInfo.cursorX);
             break;
     }
 }
@@ -202,12 +206,16 @@ void processAnimateInput()
         case 'j': case 'J':
             if (write(STDIN_FILENO, "\x1b[B", 3) == -1)
                 die("processMainInput move down");
-            if (termInfo.cursorY >= termInfo.cursorYLimit)
-                setCursorPosition(termInfo.cursorYLimit, termInfo.cursorX);
+            getCursorPosition(&termInfo.cursorY, &termInfo.cursorX);
+            if (termInfo.cursorY >= termInfo.cursorYMax)
+                setCursorPosition(termInfo.cursorYMax - 1, termInfo.cursorX);
             break;
         case 'k': case 'K':
             if (write(STDIN_FILENO, "\x1b[A", 3) == -1)
                 die("processMainInput move up");
+            getCursorPosition(&termInfo.cursorY, &termInfo.cursorX);
+            if (termInfo.cursorY <= termInfo.cursorYMin)
+                setCursorPosition(termInfo.cursorYMin + 1, termInfo.cursorX);
             break;
     }
 
@@ -252,6 +260,8 @@ int main(void)
 
     if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
         die("getTerminalSize");
+
+    termInfo.cursorY = termInfo.cursorYMin;
 
     processScreen();
 
