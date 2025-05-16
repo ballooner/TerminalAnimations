@@ -14,7 +14,7 @@
 
 //Data
 enum ScreenStates {
-    MAIN = 1,
+    MAIN    = 1,
     ANIMATE = 2
 };
 
@@ -178,6 +178,9 @@ void processAnimateInput()
         case CTRL_KEY('q'):
             clearScreen();
             exit(0);
+            break;
+        case 27:
+            termInfo.screenState = MAIN;
             break;
     }
 }
