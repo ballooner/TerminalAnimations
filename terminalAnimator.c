@@ -101,8 +101,9 @@ int getTerminalSize(int *row, int *col)
     return 0;
 }
 
-void windowResizeHandler(int signum)
+void windowResizeHandler()
 {
+    setCursorPosition(0, 0);
     getTerminalSize(&termInfo.rowSize, &termInfo.colSize);
 }
 
@@ -149,6 +150,7 @@ void renderAnimationOverlay()
 
     printf("\r\n");
 
+    //Set bg of text to its default
     if (write(STDIN_FILENO, "\x1b[49m", 5) == -1)
         die("renderOverlay set bg color to default");
 }
@@ -157,6 +159,8 @@ void renderAnimationOverlay()
 //Input
 void processMainInput()
 {
+    setCursorPosition(0, 0);
+
     char c;
     read(STDIN_FILENO, &c, 1);
     switch (c)
@@ -173,6 +177,8 @@ void processMainInput()
 
 void processAnimateInput()
 {
+    setCursorPosition(termInfo.cursorY, termInfo.cursorX);
+
     char c;
     read(STDIN_FILENO, &c, 1);
     switch (c)
@@ -187,10 +193,22 @@ void processAnimateInput()
         case 'l': case 'L':
             if (write(STDIN_FILENO, "\x1b[C", 3) == -1) 
                 die("processMainInput move right");
-            termInfo.cursorX++;
             break;
-
+        case 'h': case 'H':
+            if (write(STDIN_FILENO, "\x1b[D", 3) == -1)
+                die("processMainInput move left");
+            break;
+        case 'j': case 'J':
+            if (write(STDIN_FILENO, "\x1b[B", 3) == -1)
+                die("processMainInput move down");
+            break;
+        case 'k': case 'K':
+            if (write(STDIN_FILENO, "\x1b[A", 3) == -1)
+                die("processMainInput move up");
+            break;
     }
+
+    getCursorPosition(&termInfo.cursorY, &termInfo.cursorX);
 }
 
 void processScreen()
