@@ -21,8 +21,8 @@ enum ScreenStates {
 struct terminalInfo {
     struct termios originalParams;
     struct termios currParams;
-    int rowSize;
-    int colSize;
+    int height;
+    int width;
     int cursorX;
     int cursorY;
     int cursorYMax;
@@ -113,9 +113,7 @@ int getTerminalSize(int *row, int *col)
 
 void windowResizeHandler()
 {
-    termInfo.cursorX = 0;
-    termInfo.cursorY = termInfo.cursorYMin;
-    getTerminalSize(&termInfo.rowSize, &termInfo.colSize);
+    getTerminalSize(&termInfo.height, &termInfo.width);
 }
 
 
@@ -129,30 +127,28 @@ void renderMainMenu()
 
 void renderAnimationOverlay()
 {
-    int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
-    termInfo.cursorYMax = topOverlayRow + 1;
+    int topOverlayRow = termInfo.height - (termInfo.height / 4);
+    termInfo.cursorYMax = topOverlayRow;
     termInfo.cursorYMin = 1;
-
-    //Set cursor to home position
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("renderOverlay set home");
-
-    char buffer[32];
-
-    //Move down 3/4 of the screen
-    sprintf(buffer, "\x1b[%dB", topOverlayRow);
-    if (write(STDIN_FILENO, buffer, strlen(buffer)) == -1)
-        die("renderOverlay move cursor");
 
     //Set bg of future text to white
     if (write(STDIN_FILENO, "\x1b[107m", 6) == -1)
         die("renderOverlay set bg to white");
 
-    //Set 3/4 line to white
-    for (int i = 0; i < termInfo.colSize; i++)
+    //Make sure cursor is on 0, 0 and set that row to white
+    setCursorPosition(0, 0);
+    for (int i = 0; i < termInfo.width; i++)
     {
         printf(" ");
     }
+    printf("\r\n");
 
+    //Move down 3/4 of the screen and set that whole row to white
+    setCursorPosition(topOverlayRow, 0);
+    for (int i = 0; i < termInfo.width; i++)
+    {
+        printf(" ");
+    }
     printf("\r\n");
 
     //Set bg of text to its default
@@ -175,7 +171,7 @@ void processMainInput()
             break;
         case '1':
             termInfo.screenState = ANIMATE;
-            termInfo.cursorY = 1;
+            termInfo.cursorY = 2;
             setCursorPosition(termInfo.cursorY, termInfo.cursorX);
             break;
     }
@@ -240,7 +236,6 @@ void processScreen()
                 processAnimateInput();
                 break;
         }
-
     }
 }
 
@@ -258,7 +253,7 @@ int main(void)
 
     sigaction(SIGWINCH, &windowSizeAction, NULL);
 
-    if (getTerminalSize(&termInfo.rowSize, &termInfo.colSize) == -1) 
+    if (getTerminalSize(&termInfo.height, &termInfo.width) == -1) 
         die("getTerminalSize");
 
     termInfo.cursorY = termInfo.cursorYMin;
