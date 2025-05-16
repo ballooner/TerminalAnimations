@@ -25,6 +25,7 @@ struct terminalInfo {
     int colSize;
     int cursorX;
     int cursorY;
+    int cursorYLimit;
     enum ScreenStates screenState;
 };
 
@@ -127,6 +128,7 @@ void renderMainMenu()
 void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
+    termInfo.cursorYLimit = topOverlayRow;
 
     //Set cursor to home position
     if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("renderOverlay set home");
@@ -201,6 +203,8 @@ void processAnimateInput()
         case 'j': case 'J':
             if (write(STDIN_FILENO, "\x1b[B", 3) == -1)
                 die("processMainInput move down");
+            if (termInfo.cursorY >= termInfo.cursorYLimit)
+                setCursorPosition(termInfo.cursorYLimit, termInfo.cursorX);
             break;
         case 'k': case 'K':
             if (write(STDIN_FILENO, "\x1b[A", 3) == -1)
