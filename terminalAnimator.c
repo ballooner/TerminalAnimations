@@ -61,7 +61,7 @@ void enterRawMode()
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.currParams);
 }
 
-void getCursorPosition()
+void getCursorPosition(int *row, int *col)
 {
     //Request position report
     if (write(STDIN_FILENO, "\x1b[6n", 4) == -1) die("getCursorPosition report");
@@ -80,7 +80,15 @@ void getCursorPosition()
 
     //Process the report
     if (buffer[0] != '\x1b' && buffer[1] != '[') die("getCursorPosition process");
-    sscanf(&buffer[2], "%d;%d", &termInfo.cursorY, &termInfo.cursorX);
+    sscanf(&buffer[2], "%d;%d", row, col);
+}
+
+void setCursorPosition(int row, int col)
+{
+    char buffer[32];
+    sprintf(buffer, "\x1b[%d;%dH", row, col);
+    if (write(STDIN_FILENO, buffer, strlen(buffer)) == -1) 
+        die("setCursorPosition");
 }
 
 int getTerminalSize(int *row, int *col)
@@ -88,10 +96,7 @@ int getTerminalSize(int *row, int *col)
     //Move cursor to bottom right and request cursor position
     if (write(STDIN_FILENO, "\x1b[999B\x1b[999C", 12) == -1) return -1;
 
-    getCursorPosition();
-
-    *col = termInfo.cursorX;
-    *row = termInfo.cursorY;
+    getCursorPosition(row, col);
 
     return 0;
 }
@@ -107,14 +112,12 @@ void clearScreen()
 {
     //Clear the screen
     if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) die("clearScreen");
-
-    //Set the cursor to home
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) die("clearScreen set cursor");
 }
 
     //Render the main menu
 void renderMainMenu()
 {
+    setCursorPosition(0, 0);
     printf("1. Animate\r\n");
     printf("2. Quit\r\n");
 }
@@ -145,10 +148,9 @@ void renderAnimationOverlay()
     }
 
     printf("\r\n");
+
     if (write(STDIN_FILENO, "\x1b[49m", 5) == -1)
         die("renderOverlay set bg color to default");
-    if (write(STDIN_FILENO, "\x1b[0H", 4) == -1) 
-        die("renderOverlay set cursor to home");
 }
 
 
@@ -182,6 +184,12 @@ void processAnimateInput()
         case 27:
             termInfo.screenState = MAIN;
             break;
+        case 'l': case 'L':
+            if (write(STDIN_FILENO, "\x1b[C", 3) == -1) 
+                die("processMainInput move right");
+            termInfo.cursorX++;
+            break;
+
     }
 }
 
@@ -190,7 +198,6 @@ void processScreen()
     while (1)
     {
         clearScreen();
-        getCursorPosition();
 
         //Decide what menu to render
         switch (termInfo.screenState)
