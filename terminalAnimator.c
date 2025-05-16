@@ -40,8 +40,16 @@ void die(const char *s)
     exit(-1);
 }
 
+void clearScreen()
+{
+    //Clear the screen
+    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) die("clearScreen");
+}
+
 void leaveRawMode()
 {
+    clearScreen();
+    write(STDIN_FILENO, "\x1b[H", 3);
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &termInfo.originalParams);
 }
 
@@ -104,19 +112,13 @@ int getTerminalSize(int *row, int *col)
 
 void windowResizeHandler()
 {
-    setCursorPosition(0, 0);
+    termInfo.cursorX = 1;
+    termInfo.cursorY = 1;
     getTerminalSize(&termInfo.rowSize, &termInfo.colSize);
 }
 
 
 //Render functions
-void clearScreen()
-{
-    //Clear the screen
-    if (write(STDIN_FILENO, "\x1b[2J", 4) == -1) die("clearScreen");
-}
-
-    //Render the main menu
 void renderMainMenu()
 {
     setCursorPosition(0, 0);
@@ -124,7 +126,6 @@ void renderMainMenu()
     printf("2. Quit\r\n");
 }
 
-    //Render the animation overlay to show keybinds
 void renderAnimationOverlay()
 {
     int topOverlayRow = termInfo.rowSize - (termInfo.rowSize / 4);
@@ -168,7 +169,6 @@ void processMainInput()
     switch (c)
     {
         case CTRL_KEY('q'): case '2':
-            clearScreen();
             exit(0);
             break;
         case '1':
@@ -186,7 +186,6 @@ void processAnimateInput()
     switch (c)
     {
         case CTRL_KEY('q'):
-            clearScreen();
             exit(0);
             break;
         case 27:
